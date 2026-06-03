@@ -1,0 +1,50 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "parallel",
+          "data": {
+            "commands": [
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "rStartToOp"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "Intake down"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "OpTorScore"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "rScoreTorNeutral"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "rNeutralToRscore"
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": "Right Autons",
+  "choreoAuto": false
+}

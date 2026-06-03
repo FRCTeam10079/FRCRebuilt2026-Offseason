@@ -1,0 +1,54 @@
+{
+  "version": "2025.0",
+  "waypoints": [
+    {
+      "anchor": {
+        "x": 0.7170462633451962,
+        "y": 5.9124792408066424
+      },
+      "prevControl": null,
+      "nextControl": {
+        "x": 1.7034453613307974,
+        "y": 6.073500863283556
+      },
+      "isLocked": false,
+      "linkedName": "ldepot"
+    },
+    {
+      "anchor": {
+        "x": 1.85,
+        "y": 3.747
+      },
+      "prevControl": {
+        "x": 2.7680109480614252,
+        "y": 3.7664596396360093
+      },
+      "nextControl": null,
+      "isLocked": false,
+      "linkedName": "lScore"
+    }
+  ],
+  "rotationTargets": [],
+  "constraintZones": [],
+  "pointTowardsZones": [],
+  "eventMarkers": [],
+  "globalConstraints": {
+    "maxVelocity": 4.0,
+    "maxAcceleration": 4.0,
+    "maxAngularVelocity": 540.0,
+    "maxAngularAcceleration": 720.0,
+    "nominalVoltage": 12.0,
+    "unlimited": false
+  },
+  "goalEndState": {
+    "velocity": 0,
+    "rotation": 0.0
+  },
+  "reversed": false,
+  "folder": "Left Paths",
+  "idealStartingState": {
+    "velocity": 0,
+    "rotation": 1.2425723703229246
+  },
+  "useDefaultConstraints": false
+}

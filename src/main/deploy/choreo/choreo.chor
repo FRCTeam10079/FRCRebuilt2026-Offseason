@@ -1,0 +1,113 @@
+{
+ "name":"choreo",
+ "version":2,
+ "type":"Swerve",
+ "variables":{
+  "expressions":{},
+  "poses":{
+   "Rscore":{
+    "x":{
+     "exp":"1.8 m",
+     "val":1.8
+    },
+    "y":{
+     "exp":"1.8 m",
+     "val":1.8
+    },
+    "heading":{
+     "exp":"0.8 rad",
+     "val":0.8
+    }
+   },
+   "outpost":{
+    "x":{
+     "exp":"35 / 2 inches",
+     "val":0.4445
+    },
+    "y":{
+     "exp":"1 m",
+     "val":1.0
+    },
+    "heading":{
+     "exp":"3.14 / 2 rad",
+     "val":1.57
+    }
+   }
+  }
+ },
+ "config":{
+  "frontLeft":{
+   "x":{
+    "exp":"11 in",
+    "val":0.2794
+   },
+   "y":{
+    "exp":"11 in",
+    "val":0.2794
+   }
+  },
+  "backLeft":{
+   "x":{
+    "exp":"-11 in",
+    "val":-0.2794
+   },
+   "y":{
+    "exp":"11 in",
+    "val":0.2794
+   }
+  },
+  "mass":{
+   "exp":"135 lbs",
+   "val":61.23496995
+  },
+  "inertia":{
+   "exp":"5 kg m ^ 2",
+   "val":5.0
+  },
+  "gearing":{
+   "exp":"6.5",
+   "val":6.5
+  },
+  "radius":{
+   "exp":"2 in",
+   "val":0.0508
+  },
+  "vmax":{
+   "exp":"6000 RPM",
+   "val":628.3185307179587
+  },
+  "tmax":{
+   "exp":"2.4 N * m",
+   "val":2.4
+  },
+  "cof":{
+   "exp":"2",
+   "val":2.0
+  },
+  "bumper":{
+   "front":{
+    "exp":"17.5 in",
+    "val":0.4445
+   },
+   "side":{
+    "exp":"16 in",
+    "val":0.4064
+   },
+   "back":{
+    "exp":"17.5 in",
+    "val":0.4445
+   }
+  },
+  "differentialTrackWidth":{
+   "exp":"22 in",
+   "val":0.5588
+  }
+ },
+ "generationFeatures":[],
+ "codegen":{
+  "root":"",
+  "genVars":true,
+  "genTrajData":true,
+  "useChoreoLib":true
+ }
+}

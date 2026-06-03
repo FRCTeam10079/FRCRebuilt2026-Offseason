@@ -1,0 +1,23 @@
+#!/bin/sh
+set -e
+
+STAGED_FILES=$(git diff --staged --name-only --diff-filter=ACM)
+if [ -z "$STAGED_FILES" ]; then
+  exit 0
+fi
+
+case $(uname) in
+  MINGW*|MSYS_NT*|CYGWIN_NT*)
+    export JAVA_HOME="C:/Users/Public/wpilib/2025/jdk"
+    ;;
+  Darwin|Linux)
+    export JAVA_HOME="$HOME/wpilib/2025/jdk"
+    ;;
+  *)
+    echo "Unknown OS: $(uname)"
+    exit 1
+    ;;
+esac
+
+./gradlew spotlessApply -q
+git add $STAGED_FILES
