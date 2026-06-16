@@ -17,6 +17,11 @@ public class DrivetrainConstants {
   public static final double NORMAL_SPEED_COEFFICIENT = 1.0;
   public static final double SLOW_MODE_COEFFICIENT = 0.7;
   public static final double SCORING_SPEED_COEFFICIENT = 0.5;
+  /**
+   * Speed coefficient for outreach/demo mode — caps drive + rotation to 50% of full competition
+   * speed.
+   */
+  public static final double OUTREACH_SPEED_COEFFICIENT = 0.5;
 
   public static final double DEADBAND_PERCENT = 0.1;
   public static final double SKEW_COMPENSATION_SCALAR = -0.03;

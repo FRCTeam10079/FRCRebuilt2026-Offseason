@@ -19,6 +19,7 @@ import frc.robot.constants.ClimbConstants;
 import frc.robot.constants.ClimbConstants.ClimbLane;
 import frc.robot.controllers.DriverControls;
 import frc.robot.controllers.OperatorControls;
+import frc.robot.controllers.OutreachControls;
 import frc.robot.controllers.TestingBindings;
 import frc.robot.generated.TunerConstants;
 import frc.robot.lib.DashboardPublisher;
@@ -101,6 +102,11 @@ public class RobotContainer {
   // ==================== DISTANCE-BASED SHOOTING ====================
   /** Memoized setpoint supplier that caches by robot pose. */
   private final Supplier<ShooterSetpoint> m_setpointSupplier;
+
+  // ==================== ROBOT MODE CHOOSER ====================
+  /** Selects Competition (full bindings) or Outreach (50 % speed, simplified controls). */
+  private final LoggedDashboardChooser<String> m_robotModeChooser =
+      new LoggedDashboardChooser<>("Robot Mode");
 
   // ==================== CLIMB LANE CHOOSER ====================
   private final LoggedDashboardChooser<String> m_climbLaneChooser =
@@ -241,13 +247,19 @@ public class RobotContainer {
     // ==================== BUILD AUTO CHOOSER ====================
     autos = new Autos(choreoAutoFactory, autoCommands);
 
+    // ==================== ROBOT MODE CHOOSER ====================
+    m_robotModeChooser.addDefaultOption("Competition", "COMPETITION");
+    m_robotModeChooser.addOption("Outreach", "OUTREACH");
+
     // ==================== CLIMB LANE CHOOSER ====================
     m_climbLaneChooser.addDefaultOption("Center", "CENTER");
     m_climbLaneChooser.addOption("Left", "LEFT");
     m_climbLaneChooser.addOption("Right", "RIGHT");
 
-    // Configure button bindings
-    configureBindings();
+    // NOTE: configureBindings() is intentionally NOT called here.
+    // It is deferred to Robot.teleopInit() (first call only) so the
+    // LoggedDashboardChooser for Robot Mode has had time to receive the
+    // dashboard's NT selection before bindings are committed.
   }
 
   /**
@@ -263,8 +275,12 @@ public class RobotContainer {
   /**
    * Configure button bindings for driver and operator controllers. Delegates to dedicated binding
    * classes for clean separation.
+   *
+   * <p>Called from {@link frc.robot.Robot#teleopInit()} on the first teleop enable so that the
+   * "Robot Mode" {@link LoggedDashboardChooser} has had time to receive the dashboard's NT
+   * selection before bindings are committed.
    */
-  private void configureBindings() {
+  public void configureBindings() {
 
     // Build climb pathfind commands: two-phase approach to avoid routing through
     // the climb structure.
@@ -284,22 +300,36 @@ public class RobotContainer {
       return ClimbConstants.getClimbPose(lane, isRed);
     });
 
-    DriverControls.configure(
-        m_driverController, drivetrain, vision, superstructure, m_stateMachine, m_setpointSupplier);
-    OperatorControls.configure(
-        m_operatorController,
-        superstructure,
-        intake,
-        shooterPivot,
-        climber,
-        m_stateMachine,
-        m_setpointSupplier,
-        () -> ShooterMath.getDistanceToHub(drivetrain.getState().Pose),
-        climbApproachCommandFactory,
-        climbEntryCommandFactory,
-        drivetrain);
-    TestingBindings.configure(
-        m_testController, drivetrain, intake, pivot, indexer, shooter, vision);
+    boolean isOutreach = "OUTREACH".equals(m_robotModeChooser.get());
+    Logger.recordOutput("RobotMode/Outreach", isOutreach);
+
+    if (isOutreach) {
+      // Outreach / demo mode: simplified single-controller bindings, 50 % speed cap.
+      OutreachControls.configure(m_driverController, drivetrain, vision, superstructure, climber);
+    } else {
+      // Competition mode: full driver + operator + testing bindings.
+      DriverControls.configure(
+          m_driverController,
+          drivetrain,
+          vision,
+          superstructure,
+          m_stateMachine,
+          m_setpointSupplier);
+      OperatorControls.configure(
+          m_operatorController,
+          superstructure,
+          intake,
+          shooterPivot,
+          climber,
+          m_stateMachine,
+          m_setpointSupplier,
+          () -> ShooterMath.getDistanceToHub(drivetrain.getState().Pose),
+          climbApproachCommandFactory,
+          climbEntryCommandFactory,
+          drivetrain);
+      TestingBindings.configure(
+          m_testController, drivetrain, intake, pivot, indexer, shooter, vision);
+    }
   }
 
   /** Get the driver controller for use in commands/subsystems */
@@ -349,6 +379,7 @@ public class RobotContainer {
   public Command getAutonomousCommand() {
     return autos.getSelected();
   }
+
   /** Resolve the currently selected climb lane from the dashboard chooser. */
   private ClimbLane resolveClimbLane() {
     String selected = m_climbLaneChooser.get();

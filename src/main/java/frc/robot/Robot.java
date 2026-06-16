@@ -42,6 +42,14 @@ public class Robot extends LoggedRobot {
   private int m_periodicCycleCount = 0;
   private int m_robotEventSequence = 0;
 
+  /**
+   * Guards {@link RobotContainer#configureBindings()} so it only runs once - on the first teleop
+   * enable. By that point the dashboard (AdvantageScope, Elastic, Shuffleboard, SmartDashboard) has
+   * had time to connect and push back any previously saved NT selection, ensuring the "Robot Mode"
+   * chooser reflects the operator's actual intent.
+   */
+  private boolean m_bindingsConfigured = false;
+
   public Robot() {
     // In sim/replay, missing extra controllers are expected and warning spam can
     // stall the loop enough to trigger stale CAN status signals.
@@ -186,6 +194,13 @@ public class Robot extends LoggedRobot {
 
   @Override
   public void teleopInit() {
+    // Configure bindings the first time teleop starts - deferred from the
+    // constructor so the "Robot Mode" dashboard chooser NT value is stable.
+    if (!m_bindingsConfigured) {
+      m_robotContainer.configureBindings();
+      m_bindingsConfigured = true;
+    }
+
     // State machine transition: Teleop starting
     m_stateMachine.setMatchState(MatchState.TELEOP_INIT);
     ShooterSetpoint.resetOffsets();
