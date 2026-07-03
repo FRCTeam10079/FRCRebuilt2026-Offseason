@@ -62,5 +62,5 @@
   "java.format.settings.profile": "GoogleStyle",
   "java.dependency.enableDependencyCheckup": false,
   "editor.formatOnSave": true,
-  "editor.tabSize": 2,
+  "editor.tabSize": 2
 }
