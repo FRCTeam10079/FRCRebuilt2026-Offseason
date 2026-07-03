@@ -143,8 +143,7 @@ public final class DriverControls {
     // Scoring-zone SOTM (non-passing): use Oliver's ShootOnTheMoveDrive.
     sotmTrigger
         .and(() -> useScoringZoneSotm[0])
-        .whileTrue(
-            new ShootOnTheMoveDrive(drivetrain, vision, translationY::get, translationX::get));
+        .whileTrue(new ShootOnTheMoveDrive(drivetrain, translationY::get, translationX::get));
 
     // Passing/ferrying SOTM: use branch drivetrain SOTM implementation.
     // Uses translationY/translationX so invertTranslation toggle is honored.
