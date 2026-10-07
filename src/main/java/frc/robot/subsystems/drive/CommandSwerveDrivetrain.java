@@ -47,7 +47,8 @@ import java.util.function.Supplier;
 import org.littletonrobotics.junction.Logger;
 
 /**
- * Class that extends the Phoenix 6 SwerveDrivetrain class and implements Subsystem so it can easily
+ * Class that extends the Phoenix 6 SwerveDrivetrain class and implements
+ * Subsystem so it can easily
  * be used in command-based projects.
  */
 public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Subsystem {
@@ -63,8 +64,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   private boolean m_hasAppliedOperatorPerspective = false;
 
   // Skew compensation and deadband sourced from Constants
-  private static final double SKEW_COMPENSATION_SCALAR =
-      Constants.DrivetrainConstants.SKEW_COMPENSATION_SCALAR;
+  private static final double SKEW_COMPENSATION_SCALAR = Constants.DrivetrainConstants.SKEW_COMPENSATION_SCALAR;
   private static final double CONTROLLER_DEADBAND = Constants.DrivetrainConstants.DEADBAND_PERCENT;
 
   /*
@@ -95,10 +95,10 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   // All SOTM gains and thresholds are live-tunable via NetworkTables under
   // /Tuning/.
   // Adapted from MA (6328) LoggedTunableNumber pattern.
-  private static final LoggedTunableNumber sotmLaunchKp =
-      new LoggedTunableNumber("SOTM/LaunchKp", Constants.HeadingControllerConstants.LAUNCH_KP);
-  private static final LoggedTunableNumber sotmLaunchKd =
-      new LoggedTunableNumber("SOTM/LaunchKd", Constants.HeadingControllerConstants.LAUNCH_KD);
+  private static final LoggedTunableNumber sotmLaunchKp = new LoggedTunableNumber("SOTM/LaunchKp",
+      Constants.HeadingControllerConstants.LAUNCH_KP);
+  private static final LoggedTunableNumber sotmLaunchKd = new LoggedTunableNumber("SOTM/LaunchKd",
+      Constants.HeadingControllerConstants.LAUNCH_KD);
   private static final LoggedTunableNumber sotmYawToleranceDeg = new LoggedTunableNumber(
       "SOTM/YawToleranceDeg", Constants.ShooterConstants.LAUNCH_HEADING_TOLERANCE_DEGREES);
   private static final LoggedTunableNumber sotmPitchToleranceDeg = new LoggedTunableNumber(
@@ -108,10 +108,10 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   private static final LoggedTunableNumber sotmMaxPolarVelocity = new LoggedTunableNumber(
       "SOTM/MaxPolarVelocityRadPerSec",
       Constants.DrivetrainConstants.MAX_POLAR_VELOCITY_RAD_PER_SEC);
-  private static final LoggedTunableNumber sotmAdaptivePolarFullErrorDeg =
-      new LoggedTunableNumber("SOTM/AdaptivePolarFullErrorDeg", 30.0);
-  private static final LoggedTunableNumber sotmAdaptivePolarMaxScale =
-      new LoggedTunableNumber("SOTM/AdaptivePolarMaxScale", 1.8);
+  private static final LoggedTunableNumber sotmAdaptivePolarFullErrorDeg = new LoggedTunableNumber(
+      "SOTM/AdaptivePolarFullErrorDeg", 30.0);
+  private static final LoggedTunableNumber sotmAdaptivePolarMaxScale = new LoggedTunableNumber(
+      "SOTM/AdaptivePolarMaxScale", 1.8);
   private static final LoggedTunableNumber sotmMaxShootingSpeedMps = new LoggedTunableNumber(
       "SOTM/MaxShootingSpeedMps", Constants.DrivetrainConstants.MAX_SHOOTING_SPEED_MPS);
   private static final LoggedTunableNumber sotmMaxShootingAngularRate = new LoggedTunableNumber(
@@ -126,12 +126,11 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   private static final LoggedTunableNumber sotmOlockOmegaThreshold = new LoggedTunableNumber(
       "SOTM/OLockOmegaThresholdRadPerSec",
       Constants.DrivetrainConstants.OLOCK_OMEGA_THRESHOLD_RAD_PER_SEC);
-  private static final LoggedTunableNumber sotmPassingYawToleranceDeg =
-      new LoggedTunableNumber("SOTM/PassingYawToleranceDeg", 15.0);
+  private static final LoggedTunableNumber sotmPassingYawToleranceDeg = new LoggedTunableNumber(
+      "SOTM/PassingYawToleranceDeg", 15.0);
 
   /** Swerve request to apply during robot-centric path following */
-  private final SwerveRequest.ApplyRobotSpeeds m_pathApplyRobotSpeeds =
-      new SwerveRequest.ApplyRobotSpeeds();
+  private final SwerveRequest.ApplyRobotSpeeds m_pathApplyRobotSpeeds = new SwerveRequest.ApplyRobotSpeeds();
 
   // ==================== CHOREO TRAJECTORY FOLLOWER ====================
   private final PIDController m_choreoXController = new PIDController(
@@ -148,12 +147,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
       Constants.DrivetrainConstants.CHOREO_HEADING_KD);
 
   /* Swerve requests to apply during SysId characterization */
-  private final SwerveRequest.SysIdSwerveTranslation m_translationCharacterization =
-      new SwerveRequest.SysIdSwerveTranslation();
-  private final SwerveRequest.SysIdSwerveSteerGains m_steerCharacterization =
-      new SwerveRequest.SysIdSwerveSteerGains();
-  private final SwerveRequest.SysIdSwerveRotation m_rotationCharacterization =
-      new SwerveRequest.SysIdSwerveRotation();
+  private final SwerveRequest.SysIdSwerveTranslation m_translationCharacterization = new SwerveRequest.SysIdSwerveTranslation();
+  private final SwerveRequest.SysIdSwerveSteerGains m_steerCharacterization = new SwerveRequest.SysIdSwerveSteerGains();
+  private final SwerveRequest.SysIdSwerveRotation m_rotationCharacterization = new SwerveRequest.SysIdSwerveRotation();
 
   /*
    * SysId routine for characterizing translation. This is used to find PID gains
@@ -186,15 +182,22 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
           volts -> setControl(m_steerCharacterization.withVolts(volts)), null, this));
 
   /**
-   * Resets the robot's field-relative heading to the alliance-correct forward direction while
+   * Resets the robot's field-relative heading to the alliance-correct forward
+   * direction while
    * preserving the current XY position from the pose estimator.
    *
-   * <p>This is the correct "reset heading" for drivers: it tells the pose estimator "I am facing
-   * the field" (0 deg for Blue alliance, 180 deg for Red alliance) without destroying vision
-   * localization. MegaTag2 immediately adapts because it reads the fused heading from
+   * <p>
+   * This is the correct "reset heading" for drivers: it tells the pose estimator
+   * "I am facing
+   * the field" (0 deg for Blue alliance, 180 deg for Red alliance) without
+   * destroying vision
+   * localization. MegaTag2 immediately adapts because it reads the fused heading
+   * from
    * getState().Pose each frame via SetRobotOrientation().
    *
-   * <p>Inspired by Team 6328 (Mechanical Advantage) approach: adjust gyro offset to map old
+   * <p>
+   * Inspired by Team 6328 (Mechanical Advantage) approach: adjust gyro offset to
+   * map old
    * rotation to new rotation, preserving XY.
    */
   public void resetFieldHeading() {
@@ -203,10 +206,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     // Determine the correct "forward" heading based on alliance
     // Blue alliance: 0 deg means facing the red alliance wall
     // Red alliance: 180 deg means facing the blue alliance wall
-    Rotation2d allianceForwardHeading =
-        DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red
-            ? Rotation2d.k180deg
-            : Rotation2d.kZero;
+    Rotation2d allianceForwardHeading = DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red
+        ? Rotation2d.k180deg
+        : Rotation2d.kZero;
 
     // Build a new pose that keeps the current XY but sets the heading
     // to the alliance-correct forward direction
@@ -256,11 +258,14 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   /**
    * Constructs a CTRE SwerveDrivetrain using the specified constants.
    *
-   * <p>This constructs the underlying hardware devices, so users should not construct the devices
-   * themselves. If they need the devices, they can access them through getters in the classes.
+   * <p>
+   * This constructs the underlying hardware devices, so users should not
+   * construct the devices
+   * themselves. If they need the devices, they can access them through getters in
+   * the classes.
    *
    * @param drivetrainConstants Drivetrain-wide constants for the swerve drive
-   * @param modules Constants for each specific module
+   * @param modules             Constants for each specific module
    */
   public CommandSwerveDrivetrain(
       SwerveDrivetrainConstants drivetrainConstants, SwerveModuleConstants<?, ?, ?>... modules) {
@@ -274,13 +279,18 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   /**
    * Constructs a CTRE SwerveDrivetrain using the specified constants.
    *
-   * <p>This constructs the underlying hardware devices, so users should not construct the devices
-   * themselves. If they need the devices, they can access them through getters in the classes.
+   * <p>
+   * This constructs the underlying hardware devices, so users should not
+   * construct the devices
+   * themselves. If they need the devices, they can access them through getters in
+   * the classes.
    *
-   * @param drivetrainConstants Drivetrain-wide constants for the swerve drive
-   * @param odometryUpdateFrequency The frequency to run the odometry loop. If unspecified or set to
-   *     0 Hz, this is 250 Hz on CAN FD, and 100 Hz on CAN 2.0.
-   * @param modules Constants for each specific module
+   * @param drivetrainConstants     Drivetrain-wide constants for the swerve drive
+   * @param odometryUpdateFrequency The frequency to run the odometry loop. If
+   *                                unspecified or set to
+   *                                0 Hz, this is 250 Hz on CAN FD, and 100 Hz on
+   *                                CAN 2.0.
+   * @param modules                 Constants for each specific module
    */
   public CommandSwerveDrivetrain(
       SwerveDrivetrainConstants drivetrainConstants,
@@ -296,17 +306,26 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   /**
    * Constructs a CTRE SwerveDrivetrain using the specified constants.
    *
-   * <p>This constructs the underlying hardware devices, so users should not construct the devices
-   * themselves. If they need the devices, they can access them through getters in the classes.
+   * <p>
+   * This constructs the underlying hardware devices, so users should not
+   * construct the devices
+   * themselves. If they need the devices, they can access them through getters in
+   * the classes.
    *
-   * @param drivetrainConstants Drivetrain-wide constants for the swerve drive
-   * @param odometryUpdateFrequency The frequency to run the odometry loop. If unspecified or set to
-   *     0 Hz, this is 250 Hz on CAN FD, and 100 Hz on CAN 2.0.
-   * @param odometryStandardDeviation The standard deviation for odometry calculation in the form
-   *     [x, y, theta]ᵀ, with units in meters and radians
-   * @param visionStandardDeviation The standard deviation for vision calculation in the form [x, y,
-   *     theta]ᵀ, with units in meters and radians
-   * @param modules Constants for each specific module
+   * @param drivetrainConstants       Drivetrain-wide constants for the swerve
+   *                                  drive
+   * @param odometryUpdateFrequency   The frequency to run the odometry loop. If
+   *                                  unspecified or set to
+   *                                  0 Hz, this is 250 Hz on CAN FD, and 100 Hz
+   *                                  on CAN 2.0.
+   * @param odometryStandardDeviation The standard deviation for odometry
+   *                                  calculation in the form
+   *                                  [x, y, theta]ᵀ, with units in meters and
+   *                                  radians
+   * @param visionStandardDeviation   The standard deviation for vision
+   *                                  calculation in the form [x, y,
+   *                                  theta]ᵀ, with units in meters and radians
+   * @param modules                   Constants for each specific module
    */
   public CommandSwerveDrivetrain(
       SwerveDrivetrainConstants drivetrainConstants,
@@ -354,8 +373,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
           // case
           () -> DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red,
           this // Subsystem for
-          // requirements
-          );
+      // requirements
+      );
     } catch (Exception ex) {
       DriverStation.reportError(
           "Failed to load PathPlanner config and configure AutoBuilder", ex.getStackTrace());
@@ -363,7 +382,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   }
 
   /**
-   * Returns a command that applies the specified control request to this swerve drivetrain.
+   * Returns a command that applies the specified control request to this swerve
+   * drivetrain.
    *
    * @param request Function returning the request to apply
    * @return Command to run
@@ -373,7 +393,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   }
 
   /**
-   * Follow a Choreo swerve sample. This method is passed into Choreo's AutoFactory.
+   * Follow a Choreo swerve sample. This method is passed into Choreo's
+   * AutoFactory.
    *
    * @param sample Choreo sample at the current autonomous timestamp
    */
@@ -391,7 +412,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   }
 
   /**
-   * Runs the SysId Quasistatic test in the given direction for the routine specified by
+   * Runs the SysId Quasistatic test in the given direction for the routine
+   * specified by
    * {@link #m_sysIdRoutineToApply}.
    *
    * @param direction Direction of the SysId Quasistatic test
@@ -402,7 +424,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   }
 
   /**
-   * Runs the SysId Dynamic test in the given direction for the routine specified by
+   * Runs the SysId Dynamic test in the given direction for the routine specified
+   * by
    * {@link #m_sysIdRoutineToApply}.
    *
    * @param direction Direction of the SysId Dynamic test
@@ -460,8 +483,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     double pitchRad = Math.toRadians(getPigeon2().getPitch().getValueAsDouble());
     double rollRad = Math.toRadians(getPigeon2().getRoll().getValueAsDouble());
     double tiltDeg = Math.abs(Math.toDegrees(Math.acos(Math.cos(pitchRad) * Math.cos(rollRad))));
-    double tiltScalar =
-        MathUtil.clamp(1.0 - MathUtil.inverseInterpolate(0, MAX_TILT_DEG, tiltDeg), 0.0, 1.0);
+    double tiltScalar = MathUtil.clamp(1.0 - MathUtil.inverseInterpolate(0, MAX_TILT_DEG, tiltDeg), 0.0, 1.0);
 
     // Compute the raw delta since last cycle and scale it by tilt trust
     var rawTwist = m_lastRawPose.log(rawPose);
@@ -486,8 +508,11 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   /**
    * Returns the tilt-corrected pose estimate.
    *
-   * <p>Unlike {@code getState().Pose}, this pose has odometry deltas scaled down when the robot is
-   * tilted (pitch/roll). At 0° tilt the poses are identical; at 25°+ tilt, odometry deltas are
+   * <p>
+   * Unlike {@code getState().Pose}, this pose has odometry deltas scaled down
+   * when the robot is
+   * tilted (pitch/roll). At 0° tilt the poses are identical; at 25°+ tilt,
+   * odometry deltas are
    * zeroed to prevent drift from wheel slip on ramps/defense.
    *
    * @return tilt-corrected Pose2d
@@ -505,11 +530,14 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   // Following the official CTRE Phoenix6 2026 examples pattern
 
   /**
-   * Adds a vision measurement to the Kalman Filter. This will correct the odometry pose estimate
+   * Adds a vision measurement to the Kalman Filter. This will correct the
+   * odometry pose estimate
    * while still accounting for measurement noise.
    *
-   * @param visionRobotPoseMeters The pose of the robot as measured by the vision camera.
-   * @param timestampSeconds The timestamp of the vision measurement in seconds.
+   * @param visionRobotPoseMeters The pose of the robot as measured by the vision
+   *                              camera.
+   * @param timestampSeconds      The timestamp of the vision measurement in
+   *                              seconds.
    */
   @Override
   public void addVisionMeasurement(Pose2d visionRobotPoseMeters, double timestampSeconds) {
@@ -517,17 +545,24 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   }
 
   /**
-   * Adds a vision measurement to the Kalman Filter. This will correct the odometry pose estimate
+   * Adds a vision measurement to the Kalman Filter. This will correct the
+   * odometry pose estimate
    * while still accounting for measurement noise.
    *
-   * <p>Note that the vision measurement standard deviations passed into this method will continue
+   * <p>
+   * Note that the vision measurement standard deviations passed into this method
+   * will continue
    * to apply to future measurements until a subsequent call to
    * {@link #setVisionMeasurementStdDevs(Matrix)} or this method.
    *
-   * @param visionRobotPoseMeters The pose of the robot as measured by the vision camera.
-   * @param timestampSeconds The timestamp of the vision measurement in seconds.
-   * @param visionMeasurementStdDevs Standard deviations of the vision pose measurement in the form
-   *     [x, y, theta]ᵀ, with units in meters and radians.
+   * @param visionRobotPoseMeters    The pose of the robot as measured by the
+   *                                 vision camera.
+   * @param timestampSeconds         The timestamp of the vision measurement in
+   *                                 seconds.
+   * @param visionMeasurementStdDevs Standard deviations of the vision pose
+   *                                 measurement in the form
+   *                                 [x, y, theta]ᵀ, with units in meters and
+   *                                 radians.
    */
   @Override
   public void addVisionMeasurement(
@@ -542,7 +577,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
    * Return the pose at a given timestamp, if the buffer is not empty.
    *
    * @param timestampSeconds The timestamp of the pose in seconds.
-   * @return The pose at the given timestamp (or Optional.empty() if the buffer is empty).
+   * @return The pose at the given timestamp (or Optional.empty() if the buffer is
+   *         empty).
    */
   @Override
   public Optional<Pose2d> samplePoseAt(double timestampSeconds) {
@@ -569,23 +605,28 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   /**
    * Creates a SwerveRequest for smooth teleop field-centric driving.
    *
-   * <p>Uses OpenLoopVoltage for more responsive driving feel during teleop (as opposed to Velocity
+   * <p>
+   * Uses OpenLoopVoltage for more responsive driving feel during teleop (as
+   * opposed to Velocity
    * mode which can feel sluggish).
    */
-  private final SwerveRequest.ApplyFieldSpeeds m_fieldCentricRequest =
-      new SwerveRequest.ApplyFieldSpeeds()
-          .withDriveRequestType(SwerveModule.DriveRequestType.OpenLoopVoltage)
-          .withForwardPerspective(SwerveRequest.ForwardPerspectiveValue.OperatorPerspective);
+  private final SwerveRequest.ApplyFieldSpeeds m_fieldCentricRequest = new SwerveRequest.ApplyFieldSpeeds()
+      .withDriveRequestType(SwerveModule.DriveRequestType.OpenLoopVoltage)
+      .withForwardPerspective(SwerveRequest.ForwardPerspectiveValue.OperatorPerspective);
 
   /**
    * Calculate chassis speeds with skew compensation for smooth driving.
    *
-   * <p>Skew compensation corrects for the drift that occurs when both translating and rotating
-   * simultaneously. The robot's actual heading is predicted slightly ahead based on current
+   * <p>
+   * Skew compensation corrects for the drift that occurs when both translating
+   * and rotating
+   * simultaneously. The robot's actual heading is predicted slightly ahead based
+   * on current
    * rotational velocity.
    *
-   * @param xVelocity Field-relative X velocity (m/s, positive = toward opposing alliance)
-   * @param yVelocity Field-relative Y velocity (m/s, positive = left)
+   * @param xVelocity       Field-relative X velocity (m/s, positive = toward
+   *                        opposing alliance)
+   * @param yVelocity       Field-relative Y velocity (m/s, positive = left)
    * @param angularVelocity Angular velocity (rad/s, positive = counter-clockwise)
    * @return ChassisSpeeds with skew compensation applied
    */
@@ -596,8 +637,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     var currentSpeeds = getState().Speeds;
 
     // Calculate skew compensation factor based on current angular velocity
-    Rotation2d skewCompensationFactor =
-        Rotation2d.fromRadians(currentSpeeds.omegaRadiansPerSecond * SKEW_COMPENSATION_SCALAR);
+    Rotation2d skewCompensationFactor = Rotation2d
+        .fromRadians(currentSpeeds.omegaRadiansPerSecond * SKEW_COMPENSATION_SCALAR);
 
     // Convert field-relative speeds to robot-relative, then back to field-relative
     // with the skew compensation applied
@@ -608,16 +649,23 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   }
 
   /**
-   * Transform field-relative velocity to account for a shifted center of rotation.
+   * Transform field-relative velocity to account for a shifted center of
+   * rotation.
    *
-   * <p>Adapted from Mechanical Advantage (6328) GeomUtil.transformVelocity. When the swerve modules
-   * pivot around a point offset from the robot center, the linear velocity at the robot center
-   * changes due to the rotational component. This method computes the adjusted velocity.
+   * <p>
+   * Adapted from Mechanical Advantage (6328) GeomUtil.transformVelocity. When the
+   * swerve modules
+   * pivot around a point offset from the robot center, the linear velocity at the
+   * robot center
+   * changes due to the rotational component. This method computes the adjusted
+   * velocity.
    *
-   * @param velocity original field-relative ChassisSpeeds
-   * @param transform robot-frame translation from robot center to the desired pivot point
+   * @param velocity        original field-relative ChassisSpeeds
+   * @param transform       robot-frame translation from robot center to the
+   *                        desired pivot point
    * @param currentRotation current robot heading (for frame conversion)
-   * @return ChassisSpeeds with linear velocity adjusted for the offset pivot point
+   * @return ChassisSpeeds with linear velocity adjusted for the offset pivot
+   *         point
    */
   private static ChassisSpeeds transformVelocityForCOR(
       ChassisSpeeds velocity, Translation2d transform, Rotation2d currentRotation) {
@@ -636,15 +684,19 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   /**
    * Apply field-centric driving with smooth driving tuning.
    *
-   * <p>Features: - Deadband application to eliminate joystick drift - Squared angular input for
-   * finer low-speed rotation control - Skew compensation for smooth combined translation/rotation -
-   * OpenLoopVoltage mode for responsive feel - Runtime velocity coefficients for slow mode /
+   * <p>
+   * Features: - Deadband application to eliminate joystick drift - Squared
+   * angular input for
+   * finer low-speed rotation control - Skew compensation for smooth combined
+   * translation/rotation -
+   * OpenLoopVoltage mode for responsive feel - Runtime velocity coefficients for
+   * slow mode /
    * scoring mode
    *
-   * @param xInput Raw X joystick input (-1 to 1)
-   * @param yInput Raw Y joystick input (-1 to 1)
-   * @param rotationInput Raw rotation joystick input (-1 to 1)
-   * @param maxVelocity Maximum translation velocity (m/s)
+   * @param xInput             Raw X joystick input (-1 to 1)
+   * @param yInput             Raw Y joystick input (-1 to 1)
+   * @param rotationInput      Raw rotation joystick input (-1 to 1)
+   * @param maxVelocity        Maximum translation velocity (m/s)
    * @param maxAngularVelocity Maximum angular velocity (rad/s)
    */
   public void driveFieldCentricSmooth(
@@ -674,15 +726,15 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     double angularVelocity = -angularMagnitude * maxAngularVelocity * rotationVelocityCoefficient;
 
     // Apply skew compensation for smooth combined translation/rotation
-    ChassisSpeeds compensatedSpeeds =
-        calculateSpeedsWithSkewCompensation(xVelocity, yVelocity, angularVelocity);
+    ChassisSpeeds compensatedSpeeds = calculateSpeedsWithSkewCompensation(xVelocity, yVelocity, angularVelocity);
 
     // Apply to drivetrain using OpenLoopVoltage for responsive feel
     setControl(m_fieldCentricRequest.withSpeeds(compensatedSpeeds));
   }
 
   /**
-   * Set the translation velocity coefficient for teleop driving. Use this for slow mode, scoring
+   * Set the translation velocity coefficient for teleop driving. Use this for
+   * slow mode, scoring
    * mode, etc.
    *
    * @param coefficient Speed multiplier (0.0 = stopped, 1.0 = full speed)
@@ -694,7 +746,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   /**
    * Set the rotation velocity coefficient for teleop driving.
    *
-   * @param coefficient Rotation speed multiplier (0.0 = no rotation, 1.0 = full rotation)
+   * @param coefficient Rotation speed multiplier (0.0 = no rotation, 1.0 = full
+   *                    rotation)
    */
   public void setRotationVelocityCoefficient(double coefficient) {
     this.rotationVelocityCoefficient = MathUtil.clamp(coefficient, 0.0, 1.0);
@@ -708,11 +761,14 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   /**
    * Creates a command for smooth teleop driving
    *
-   * @param xInputSupplier Supplier for X joystick input (typically leftY, inverted)
-   * @param yInputSupplier Supplier for Y joystick input (typically leftX, inverted)
-   * @param rotationInputSupplier Supplier for rotation joystick input (typically rightX)
-   * @param maxVelocity Maximum translation velocity (m/s)
-   * @param maxAngularVelocity Maximum angular velocity (rad/s)
+   * @param xInputSupplier        Supplier for X joystick input (typically leftY,
+   *                              inverted)
+   * @param yInputSupplier        Supplier for Y joystick input (typically leftX,
+   *                              inverted)
+   * @param rotationInputSupplier Supplier for rotation joystick input (typically
+   *                              rightX)
+   * @param maxVelocity           Maximum translation velocity (m/s)
+   * @param maxAngularVelocity    Maximum angular velocity (rad/s)
    * @return Command that continuously applies smooth driving
    */
   public Command smoothTeleopDriveCommand(
@@ -738,8 +794,10 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   }
 
   /**
-   * Enable heading lock mode with a specific target heading. In this mode, the robot will
-   * automatically rotate to face the target heading while still allowing the driver to control
+   * Enable heading lock mode with a specific target heading. In this mode, the
+   * robot will
+   * automatically rotate to face the target heading while still allowing the
+   * driver to control
    * translation.
    *
    * @param targetDegrees The target heading in degrees (field-relative)
@@ -784,13 +842,16 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   /**
    * Apply field-centric driving WITH heading lock.
    *
-   * <p>The driver controls translation (X/Y), but rotation is automatically controlled by the
-   * heading controller to maintain the locked heading. This creates a "turret mode" where the robot
+   * <p>
+   * The driver controls translation (X/Y), but rotation is automatically
+   * controlled by the
+   * heading controller to maintain the locked heading. This creates a "turret
+   * mode" where the robot
    * faces a specific direction regardless of how the driver is strafing.
    *
-   * @param xInput Raw X joystick input (-1 to 1)
-   * @param yInput Raw Y joystick input (-1 to 1)
-   * @param maxVelocity Maximum translation velocity (m/s)
+   * @param xInput             Raw X joystick input (-1 to 1)
+   * @param yInput             Raw Y joystick input (-1 to 1)
+   * @param maxVelocity        Maximum translation velocity (m/s)
    * @param maxAngularVelocity Maximum angular velocity (rad/s)
    */
   public void driveWithHeadingLock(
@@ -820,8 +881,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     double angularVelocity = rotationOutput * maxAngularVelocity;
 
     // Apply skew compensation
-    ChassisSpeeds compensatedSpeeds =
-        calculateSpeedsWithSkewCompensation(xVelocity, yVelocity, angularVelocity);
+    ChassisSpeeds compensatedSpeeds = calculateSpeedsWithSkewCompensation(xVelocity, yVelocity, angularVelocity);
 
     // Apply to drivetrain
     setControl(m_fieldCentricRequest.withSpeeds(compensatedSpeeds));
@@ -833,14 +893,16 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   /**
    * Creates a command for heading-locked driving.
    *
-   * <p>The driver controls translation with the left stick, but the robot automatically rotates to
+   * <p>
+   * The driver controls translation with the left stick, but the robot
+   * automatically rotates to
    * face the specified target heading.
    *
-   * @param xInputSupplier Supplier for X joystick input
-   * @param yInputSupplier Supplier for Y joystick input
+   * @param xInputSupplier        Supplier for X joystick input
+   * @param yInputSupplier        Supplier for Y joystick input
    * @param targetHeadingSupplier Supplier for target heading in degrees
-   * @param maxVelocity Maximum translation velocity (m/s)
-   * @param maxAngularVelocity Maximum angular velocity (rad/s)
+   * @param maxVelocity           Maximum translation velocity (m/s)
+   * @param maxAngularVelocity    Maximum angular velocity (rad/s)
    * @return Command that applies heading-locked driving
    */
   public Command headingLockedDriveCommand(
@@ -851,31 +913,31 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
       double maxAngularVelocity) {
 
     return run(() -> {
-          // Update target heading each loop (allows dynamic targeting like AprilTag
-          // tracking)
-          double targetHeading = targetHeadingSupplier.getAsDouble();
-          if (!m_headingLockEnabled) {
-            enableHeadingLock(targetHeading);
-          } else {
-            updateHeadingLockTarget(targetHeading);
-          }
+      // Update target heading each loop (allows dynamic targeting like AprilTag
+      // tracking)
+      double targetHeading = targetHeadingSupplier.getAsDouble();
+      if (!m_headingLockEnabled) {
+        enableHeadingLock(targetHeading);
+      } else {
+        updateHeadingLockTarget(targetHeading);
+      }
 
-          driveWithHeadingLock(
-              xInputSupplier.getAsDouble(),
-              yInputSupplier.getAsDouble(),
-              maxVelocity,
-              maxAngularVelocity);
-        })
+      driveWithHeadingLock(
+          xInputSupplier.getAsDouble(),
+          yInputSupplier.getAsDouble(),
+          maxVelocity,
+          maxAngularVelocity);
+    })
         .finallyDo(this::disableHeadingLock);
   }
 
   /**
    * Creates a command for heading-locked driving to a FIXED heading.
    *
-   * @param xInputSupplier Supplier for X joystick input
-   * @param yInputSupplier Supplier for Y joystick input
+   * @param xInputSupplier     Supplier for X joystick input
+   * @param yInputSupplier     Supplier for Y joystick input
    * @param fixedTargetHeading Fixed target heading in degrees
-   * @param maxVelocity Maximum translation velocity (m/s)
+   * @param maxVelocity        Maximum translation velocity (m/s)
    * @param maxAngularVelocity Maximum angular velocity (rad/s)
    * @return Command that applies heading-locked driving to the fixed heading
    */
@@ -895,14 +957,22 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   /**
    * Creates a command for driving while shooting on the move.
    *
-   * <p>This is the core shoot-on-the-move driving command, adapted from Mechanical Advantage
-   * (6328). The driver retains full translational control while the robot's heading is
-   * automatically locked to the launch angle computed by {@link LaunchCalculator}.
+   * <p>
+   * This is the core shoot-on-the-move driving command, adapted from Mechanical
+   * Advantage
+   * (6328). The driver retains full translational control while the robot's
+   * heading is
+   * automatically locked to the launch angle computed by
+   * {@link LaunchCalculator}.
    *
-   * <p>Heading control uses a PD + feedforward controller (NOT the SNAP/MAINTAIN PID): omega =
+   * <p>
+   * Heading control uses a PD + feedforward controller (NOT the SNAP/MAINTAIN
+   * PID): omega =
    * driveVelocityFF + kP * headingError + kD * (driveVelocityFF - measuredOmega)
    *
-   * <p>Velocity limiting (law of sines) prevents the driver from moving so fast that the ball's
+   * <p>
+   * Velocity limiting (law of sines) prevents the driver from moving so fast that
+   * the ball's
    * polar velocity at the hub exceeds a configurable threshold.
    *
    * @param xInputSupplier Supplier for X joystick input (forward/back)
@@ -912,7 +982,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   public Command shootOnTheMoveDriveCommand(
       DoubleSupplier xInputSupplier, DoubleSupplier yInputSupplier) {
 
-    return runOnce(() -> {})
+    return runOnce(() -> {
+    })
         .andThen(run(() -> {
           // LaunchCalculator is updated in robotPeriodic() before triggers evaluate
           LaunchCalculator calc = LaunchCalculator.getInstance();
@@ -960,10 +1031,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
               yInputSupplier.getAsDouble(), Constants.DrivetrainConstants.DEADBAND_PERCENT);
 
           // Convert joystick to field-relative velocities
-          double xVelocity =
-              -xMagnitude * sotmMaxShootingSpeedMps.get() * teleopVelocityCoefficient;
-          double yVelocity =
-              -yMagnitude * sotmMaxShootingSpeedMps.get() * teleopVelocityCoefficient;
+          double xVelocity = -xMagnitude * sotmMaxShootingSpeedMps.get() * teleopVelocityCoefficient;
+          double yVelocity = -yMagnitude * sotmMaxShootingSpeedMps.get() * teleopVelocityCoefficient;
 
           // ---- Velocity limiting (law of sines) ----
           // Prevents the ball from sweeping past the hub too fast.
@@ -998,8 +1067,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
               double lookaheadAngle = Math.PI - robotAngle - hubAngle;
 
               if (lookaheadAngle > 0) {
-                double robotLookaheadDist =
-                    rawDistance * Math.sin(hubAngle) / Math.sin(lookaheadAngle);
+                double robotLookaheadDist = rawDistance * Math.sin(hubAngle) / Math.sin(lookaheadAngle);
                 double maxLinearSpeed = robotLookaheadDist / naiveTOF;
                 maxLinearSpeedFromLimiter = maxLinearSpeed;
 
@@ -1034,14 +1102,12 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
           // shooter.
           Translation2d corOffset = shooterToRobot.times(1.0 - corScalar);
           ChassisSpeeds fieldSpeeds = new ChassisSpeeds(xVelocity, yVelocity, omegaOutput);
-          ChassisSpeeds corAdjustedSpeeds =
-              transformVelocityForCOR(fieldSpeeds, corOffset, currentHeading);
+          ChassisSpeeds corAdjustedSpeeds = transformVelocityForCOR(fieldSpeeds, corOffset, currentHeading);
 
           // ---- O-Lock: brake when nearly stationary ----
           // Adapted from MA (6328). When the robot is barely moving, sending
           // near-zero velocities causes jitter. Instead, lock wheels in X-pattern.
-          double corLinearSpeed =
-              Math.hypot(corAdjustedSpeeds.vxMetersPerSecond, corAdjustedSpeeds.vyMetersPerSecond);
+          double corLinearSpeed = Math.hypot(corAdjustedSpeeds.vxMetersPerSecond, corAdjustedSpeeds.vyMetersPerSecond);
           boolean oLock = corLinearSpeed < sotmOlockLinearThreshold.get()
               && Math.abs(corAdjustedSpeeds.omegaRadiansPerSecond) < sotmOlockOmegaThreshold.get();
 
@@ -1074,8 +1140,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
           Logger.recordOutput("SOTM/OLock", oLock);
 
           // ---- Detailed SOTM telemetry (every cycle, logged to .wpilog) ----
-          ChassisSpeeds fieldVel =
-              ChassisSpeeds.fromRobotRelativeSpeeds(currentSpeeds, currentHeading);
+          ChassisSpeeds fieldVel = ChassisSpeeds.fromRobotRelativeSpeeds(currentSpeeds, currentHeading);
           double robotSpeedMps = Math.hypot(fieldVel.vxMetersPerSecond, fieldVel.vyMetersPerSecond);
           Logger.recordOutput("SOTM/HeadingTargetDeg", params.driveAngle().getDegrees());
           Logger.recordOutput("SOTM/HeadingActualDeg", currentHeading.getDegrees());
@@ -1092,22 +1157,26 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   }
 
   /**
-   * Check if the robot heading is within launch tolerance of the target AND the robot is level
-   * enough to shoot. Uses the wider launch-mode tolerance (not the static 3 deg tolerance).
+   * Check if the robot heading is within launch tolerance of the target AND the
+   * robot is level
+   * enough to shoot. Uses the wider launch-mode tolerance (not the static 3 deg
+   * tolerance).
    *
-   * <p>Combines heading (yaw) check with pitch/roll tolerance to prevent shooting while the robot
-   * is tilted (e.g., driving over field elements). Adapted from MA (6328) atLaunchGoal().
+   * <p>
+   * Combines heading (yaw) check with pitch/roll tolerance to prevent shooting
+   * while the robot
+   * is tilted (e.g., driving over field elements). Adapted from MA (6328)
+   * atLaunchGoal().
    *
    * @return true if heading is close enough AND robot is level enough to fire
    */
   public boolean isAtLaunchHeadingGoal() {
     LaunchParameters params = LaunchCalculator.getInstance().getParameters();
-    if (params == null) return false;
+    if (params == null)
+      return false;
 
-    double errorDeg =
-        Math.abs(params.driveAngle().minus(getState().Pose.getRotation()).getDegrees());
-    double yawTolerance =
-        params.passing() ? sotmPassingYawToleranceDeg.get() : sotmYawToleranceDeg.get();
+    double errorDeg = Math.abs(params.driveAngle().minus(getState().Pose.getRotation()).getDegrees());
+    double yawTolerance = params.passing() ? sotmPassingYawToleranceDeg.get() : sotmYawToleranceDeg.get();
     boolean headingOk = errorDeg <= yawTolerance;
     boolean levelOk = isLevelForLaunch();
 
@@ -1135,7 +1204,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   /**
    * Check if the robot is level enough to shoot on the move.
    *
-   * <p>Reads pitch and roll from the Pigeon2 IMU. If either exceeds the tolerance (default 5deg,
+   * <p>
+   * Reads pitch and roll from the Pigeon2 IMU. If either exceeds the tolerance
+   * (default 5deg,
    * matching MA), the robot is considered too tilted for an accurate shot.
    *
    * @return true if pitch and roll are within tolerance
@@ -1155,10 +1226,13 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   /**
    * Create a command to pathfind to AprilTag 10 (Red Alliance Hub Face).
    *
-   * <p>Uses the AD* pathfinding algorithm to find a safe path around obstacles, then follows the
+   * <p>
+   * Uses the AD* pathfinding algorithm to find a safe path around obstacles, then
+   * follows the
    * path using PID control.
    *
-   * @return Command that pathfinds and drives to the scoring position in front of AprilTag 10
+   * @return Command that pathfinds and drives to the scoring position in front of
+   *         AprilTag 10
    */
   public Command pathfindToAprilTag10() {
     return frc.robot.pathfinding.PathfindToTagCommand.toAprilTag10(this);
