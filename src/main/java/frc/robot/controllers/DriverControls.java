@@ -7,8 +7,6 @@ package frc.robot.controllers;
 import static edu.wpi.first.units.Units.Degrees;
 
 import com.ctre.phoenix6.swerve.SwerveRequest;
-import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -98,7 +96,7 @@ public final class DriverControls {
     // AIM)
     controller
         .rightBumper()
-        .whileTrue(createAimAtHubCommand(drivetrain, translationY, translationX, vision));
+        .whileTrue(createAimAtHubCommand(drivetrain, translationY, translationX));
 
     // Right Trigger - Hold to force-shoot (aim + feed when flywheel ready).
     // On release, rebuild intent from any still-held driver controls.
@@ -227,22 +225,15 @@ public final class DriverControls {
   private static Command createAimAtHubCommand(
       CommandSwerveDrivetrain drivetrain,
       Supplier<Double> translationY,
-      Supplier<Double> translationX,
-      Vision vision) {
-    // Vision-corrected heading: robot heading + limelight tx angle
-    Supplier<edu.wpi.first.units.measure.Angle> visionCorrectedHeading = () -> {
-      Rotation2d robotHeading = drivetrain.getState().Pose.getRotation();
-      Rotation2d tx = vision.getTargetX(0); // Primary camera
-      double correctedDeg =
-          MathUtil.inputModulus(robotHeading.getDegrees() + tx.getDegrees(), -180, 180);
-      return Degrees.of(correctedDeg);
-    };
-
+      Supplier<Double> translationX) {
+    // Use the fused pose estimate (includes vision via Kalman filter) to compute
+    // geometric heading to hub. This is the correct approach - vision feeds the
+    // estimator, the drivetrain pose is the single source of truth.
     return ShooterFactory.aimAtHub(
         drivetrain,
         translationY::get,
         translationX::get,
-        visionCorrectedHeading,
+        () -> ShooterMath.getHeadingToHub(drivetrain.getState().Pose),
         Constants.DrivetrainConstants.MAX_ALIGNING_SPEED_MPS,
         Constants.DrivetrainConstants.MAX_ALIGNING_ANGULAR_RATE_RAD_PER_SEC);
   }
