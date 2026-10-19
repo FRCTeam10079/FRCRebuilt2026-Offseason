@@ -48,12 +48,12 @@ public class SwerveHeadingController {
       new LoggedTunableNumber("HeadingController/SnapKi", HeadingControllerConstants.SNAP_KI);
   private static final LoggedTunableNumber snapKd =
       new LoggedTunableNumber("HeadingController/SnapKd", HeadingControllerConstants.SNAP_KD);
-  private static final LoggedTunableNumber maintainKp =
-      new LoggedTunableNumber("HeadingController/MaintainKp", HeadingControllerConstants.MAINTAIN_KP);
-  private static final LoggedTunableNumber maintainKi =
-      new LoggedTunableNumber("HeadingController/MaintainKi", HeadingControllerConstants.MAINTAIN_KI);
-  private static final LoggedTunableNumber maintainKd =
-      new LoggedTunableNumber("HeadingController/MaintainKd", HeadingControllerConstants.MAINTAIN_KD);
+  private static final LoggedTunableNumber maintainKp = new LoggedTunableNumber(
+      "HeadingController/MaintainKp", HeadingControllerConstants.MAINTAIN_KP);
+  private static final LoggedTunableNumber maintainKi = new LoggedTunableNumber(
+      "HeadingController/MaintainKi", HeadingControllerConstants.MAINTAIN_KI);
+  private static final LoggedTunableNumber maintainKd = new LoggedTunableNumber(
+      "HeadingController/MaintainKd", HeadingControllerConstants.MAINTAIN_KD);
 
   // ==================== CSV LOGGING ====================
   private boolean m_csvHeaderPrinted = false;
@@ -127,7 +127,13 @@ public class SwerveHeadingController {
   public double update(double currentHeadingDegrees) {
     // Re-apply gains if any tunable value changed on the dashboard
     LoggedTunableNumber.ifChanged(
-        this.hashCode(), this::updateGains, snapKp, snapKi, snapKd, maintainKp, maintainKi,
+        this.hashCode(),
+        this::updateGains,
+        snapKp,
+        snapKi,
+        snapKd,
+        maintainKp,
+        maintainKi,
         maintainKd);
 
     // Normalize input to -180 to 180 range
