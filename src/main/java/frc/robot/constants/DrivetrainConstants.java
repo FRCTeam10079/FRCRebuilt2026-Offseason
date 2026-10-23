@@ -11,7 +11,7 @@ public class DrivetrainConstants {
   public static final double MAX_ANGULAR_RATE_RAD_PER_SEC = Math.PI * 1.0;
 
   public static final LinearVelocity MAX_ALIGNING_SPEED_MPS = MetersPerSecond.of(2);
-  public static final AngularVelocity MAX_ALIGNING_ANGULAR_RATE_RAD_PER_SEC = RadiansPerSecond.of(Math.PI / 3);
+  public static final AngularVelocity MAX_ALIGNING_ANGULAR_RATE_RAD_PER_SEC = RadiansPerSecond.of(Math.PI / 2);
 
   public static final double NORMAL_SPEED_COEFFICIENT = 0.2;
   public static final double SLOW_MODE_COEFFICIENT = 0.7;

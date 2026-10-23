@@ -8,6 +8,7 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj.Timer;
 import frc.robot.Constants.HeadingControllerConstants;
+import frc.robot.util.LoggedTunableNumber;
 import org.littletonrobotics.junction.Logger;
 
 /**
@@ -36,6 +37,23 @@ public class SwerveHeadingController {
   private final PIDController m_pidController;
 
   private double m_goalDegrees = 0.0;
+
+  // ==================== TUNABLE GAINS ====================
+  // Live-tunable via NetworkTables at /Tuning/HeadingController/*. Defaults come from
+  // HeadingControllerConstants so behavior is identical to the original code until a
+  // dashboard value is changed.
+  private static final LoggedTunableNumber snapKp =
+      new LoggedTunableNumber("HeadingController/SnapKp", HeadingControllerConstants.SNAP_KP);
+  private static final LoggedTunableNumber snapKi =
+      new LoggedTunableNumber("HeadingController/SnapKi", HeadingControllerConstants.SNAP_KI);
+  private static final LoggedTunableNumber snapKd =
+      new LoggedTunableNumber("HeadingController/SnapKd", HeadingControllerConstants.SNAP_KD);
+  private static final LoggedTunableNumber maintainKp = new LoggedTunableNumber(
+      "HeadingController/MaintainKp", HeadingControllerConstants.MAINTAIN_KP);
+  private static final LoggedTunableNumber maintainKi = new LoggedTunableNumber(
+      "HeadingController/MaintainKi", HeadingControllerConstants.MAINTAIN_KI);
+  private static final LoggedTunableNumber maintainKd = new LoggedTunableNumber(
+      "HeadingController/MaintainKd", HeadingControllerConstants.MAINTAIN_KD);
 
   // ==================== CSV LOGGING ====================
   private boolean m_csvHeaderPrinted = false;
@@ -107,6 +125,17 @@ public class SwerveHeadingController {
    * @return Rotation output (-1 to 1), where positive is counter-clockwise
    */
   public double update(double currentHeadingDegrees) {
+    // Re-apply gains if any tunable value changed on the dashboard
+    LoggedTunableNumber.ifChanged(
+        this.hashCode(),
+        this::updateGains,
+        snapKp,
+        snapKi,
+        snapKd,
+        maintainKp,
+        maintainKi,
+        maintainKd);
+
     // Normalize input to -180 to 180 range
     currentHeadingDegrees = MathUtil.inputModulus(currentHeadingDegrees, -180, 180);
 
@@ -175,17 +204,11 @@ public class SwerveHeadingController {
   private void updateGains() {
     switch (m_state) {
       case SNAP:
-        m_pidController.setPID(
-            HeadingControllerConstants.SNAP_KP,
-            HeadingControllerConstants.SNAP_KI,
-            HeadingControllerConstants.SNAP_KD);
+        m_pidController.setPID(snapKp.get(), snapKi.get(), snapKd.get());
         break;
 
       case MAINTAIN:
-        m_pidController.setPID(
-            HeadingControllerConstants.MAINTAIN_KP,
-            HeadingControllerConstants.MAINTAIN_KI,
-            HeadingControllerConstants.MAINTAIN_KD);
+        m_pidController.setPID(maintainKp.get(), maintainKi.get(), maintainKd.get());
         break;
 
       case OFF:
