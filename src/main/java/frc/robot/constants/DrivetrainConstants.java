@@ -8,7 +8,7 @@ import edu.wpi.first.units.measure.LinearVelocity;
 
 public class DrivetrainConstants {
   public static final double MAX_SPEED_MPS = 10.0;
-  public static final double MAX_ANGULAR_RATE_RAD_PER_SEC = Math.PI * 1.5;
+  public static final double MAX_ANGULAR_RATE_RAD_PER_SEC = Math.PI * 1;
 
   public static final LinearVelocity MAX_ALIGNING_SPEED_MPS = MetersPerSecond.of(2);
   public static final AngularVelocity MAX_ALIGNING_ANGULAR_RATE_RAD_PER_SEC = RadiansPerSecond.of(Math.PI / 2);
