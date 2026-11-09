@@ -4,7 +4,7 @@ Heading PID Tuning Tool for FRC Swerve Drivetrain
 
 This tool:
 1. Reads current PID constants from Java source files
-2. Parses .wpilog files (AdvantageKit data logs)
+2. Parses CSV logs from SwerveHeadingController (stdout capture)
 3. Analyzes heading controller performance
 4. Recommends PID values based on:
    - Steady-state error formula: error = disturbance_rate / (KP * max_angular_velocity)
@@ -12,17 +12,19 @@ This tool:
    - State transition validation
 
 Usage:
-    python tune_heading_pid.py                    # Show current constants and theory
-    python tune_heading_pid.py --log log.wpilog   # Analyze log data
-    python tune_heading_pid.py --interactive      # Interactive tuning calculator
+    python tune_heading_pid.py                              # Show current constants and theory
+    python tune_heading_pid.py --csv log.csv                # Analyze CSV data
+    python tune_heading_pid.py --interactive                # Interactive tuning calculator
+    python tune_heading_pid.py --csv log.csv --interactive  # Both
 """
 
 import re
 import sys
 import argparse
+import csv
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Optional, List, Tuple
+from typing import Optional, List
 import math
 
 
@@ -143,17 +145,8 @@ def estimate_overshoot(kp: float, kd: float, max_omega: float) -> float:
 
 
 # ============================================================================
-# WPILOG PARSING (using robotpy-wpilog)
+# CSV PARSING (from SwerveHeadingController stdout)
 # ============================================================================
-
-def try_import_wpilog():
-    """Try to import robotpy-wpilog, return module or None"""
-    try:
-        import wpilog
-        return wpilog
-    except ImportError:
-        return None
-
 
 @dataclass
 class HeadingLogEntry:
@@ -169,96 +162,93 @@ class HeadingLogEntry:
     omega_actual_rad_s: float
 
 
-def parse_wpilog_for_heading(log_path: Path) -> List[HeadingLogEntry]:
+def parse_csv_log(csv_path: Path) -> List[HeadingLogEntry]:
     """
-    Parse .wpilog file for heading controller data.
-    Expected AdvantageKit keys:
-    - HeadingController/State
-    - HeadingController/GoalDeg
-    - HeadingController/CurrentDeg
-    - HeadingController/ErrorDeg
-    - HeadingController/ActiveKP
-    - HeadingController/ActiveKD (if logged)
-    - SwerveChassisSpeeds/Measured.omega (for actual omega)
+    Parse CSV log from SwerveHeadingController.
+    Expected format (from logCSV):
+    HDG_CSV,timestamp_s,state,goal_deg,current_deg,error_deg,kP,kD,p_output,d_approx,total_output,omega_cmd_radps,omega_actual_radps
     """
-    wpilog = try_import_wpilog()
-    if wpilog is None:
-        print("⚠️  robotpy-wpilog not installed. Install with: pip install robotpy-wpilog")
-        return []
-
-    reader = wpilog.DataLogReader(str(log_path))
-    if not reader.is_valid():
-        print(f"❌ Invalid log file: {log_path}")
-        return []
-
     entries = []
-    # We need to track the latest values for each key
-    latest_values = {}
 
-    # Expected keys and their types
-    key_map = {
-        'HeadingController/State': 'string',
-        'HeadingController/GoalDeg': 'double',
-        'HeadingController/CurrentDeg': 'double',
-        'HeadingController/ErrorDeg': 'double',
-        'HeadingController/ActiveKP': 'double',
-        'HeadingController/ActiveKD': 'double',
-        'SwerveChassisSpeeds/Measured/omega': 'double',  # May vary by log format
-    }
+    with open(csv_path, 'r') as f:
+        # Find header line (might have non-CSV output before it)
+        lines = f.readlines()
 
-    # Alternative keys (AdvantageKit sometimes uses different separators)
-    alt_keys = {
-        'SwerveChassisSpeeds/Measured': 'double',  # Might be a struct
-    }
+    # Find the header line
+    header_idx = None
+    for i, line in enumerate(lines):
+        if line.startswith('HDG_CSV,'):
+            header_idx = i
+            break
 
-    print(f"📖 Reading log: {log_path}")
-    print(f"   Version: {reader.get_version():#06x}")
+    if header_idx is None:
+        print("❌ No HDG_CSV header found in file")
+        return []
 
-    # Iterate through all records
-    for record in reader:
-        # Get entry name and value
-        entry_name = record.get_entry_name()
-        if not entry_name:
-            continue
+    # Parse CSV from header onwards
+    csv_lines = lines[header_idx:]
+    reader = csv.DictReader(csv_lines)
 
-        # Try to get double value
-        val_d = 0.0
-        if record.get_type() == 'double':
-            success, val_d = record.get_double()
-            if not success:
-                continue
-        elif record.get_type() == 'string':
-            success, val_s = record.get_string()
-            if not success:
-                continue
-            latest_values[entry_name] = val_s
-            continue
-        else:
-            continue
-
-        latest_values[entry_name] = val_d
-
-        # If we have a complete set, create entry
-        # We use timestamp from the record
-        timestamp = record.get_timestamp() / 1e6  # Convert to seconds
-
-        # Check if we have minimum required data
-        if 'HeadingController/State' in latest_values and 'HeadingController/ErrorDeg' in latest_values:
+    for row in reader:
+        try:
             entry = HeadingLogEntry(
-                timestamp=timestamp,
-                state=latest_values.get('HeadingController/State', 'UNKNOWN'),
-                goal_deg=latest_values.get('HeadingController/GoalDeg', 0.0),
-                current_deg=latest_values.get('HeadingController/CurrentDeg', 0.0),
-                error_deg=latest_values.get('HeadingController/ErrorDeg', 0.0),
-                kp=latest_values.get('HeadingController/ActiveKP', 0.0),
-                kd=latest_values.get('HeadingController/ActiveKD', 0.0),
-                output=latest_values.get('HeadingController/Output', 0.0),
-                omega_cmd_rad_s=latest_values.get('HeadingController/OmegaCmd', 0.0),
-                omega_actual_rad_s=latest_values.get('SwerveChassisSpeeds/Measured/omega', 0.0),
+                timestamp=float(row['timestamp_s']),
+                state=row['state'],
+                goal_deg=float(row['goal_deg']),
+                current_deg=float(row['current_deg']),
+                error_deg=float(row['error_deg']),
+                kp=float(row['kP']),
+                kd=float(row['kD']),
+                output=float(row['total_output']),
+                omega_cmd_rad_s=float(row['omega_cmd_radps']),
+                omega_actual_rad_s=float(row['omega_actual_radps']),
             )
             entries.append(entry)
+        except (KeyError, ValueError) as e:
+            print(f"⚠️  Skipping malformed row: {row} ({e})")
+            continue
 
-    print(f"   Parsed {len(entries)} heading controller samples")
+    print(f"📖 Parsed {len(entries)} heading controller samples from CSV")
+    return entries
+
+
+def parse_csv_from_stdout(stdout_path: Path) -> List[HeadingLogEntry]:
+    """
+    Parse CSV embedded in robot stdout/stderr log file.
+    Extracts lines starting with "HDG_CSV," and parses them.
+    """
+    entries = []
+    csv_lines = ['HDG_CSV,timestamp_s,state,goal_deg,current_deg,error_deg,kP,kD,p_output,d_approx,total_output,omega_cmd_radps,omega_actual_radps']
+
+    with open(stdout_path, 'r') as f:
+        for line in f:
+            if line.startswith('HDG_CSV,'):
+                csv_lines.append(line.strip())
+
+    if len(csv_lines) == 1:
+        print("❌ No HDG_CSV lines found in stdout log")
+        return []
+
+    reader = csv.DictReader(csv_lines)
+    for row in reader:
+        try:
+            entry = HeadingLogEntry(
+                timestamp=float(row['timestamp_s']),
+                state=row['state'],
+                goal_deg=float(row['goal_deg']),
+                current_deg=float(row['current_deg']),
+                error_deg=float(row['error_deg']),
+                kp=float(row['kP']),
+                kd=float(row['kD']),
+                output=float(row['total_output']),
+                omega_cmd_rad_s=float(row['omega_cmd_radps']),
+                omega_actual_rad_s=float(row['omega_actual_radps']),
+            )
+            entries.append(entry)
+        except (KeyError, ValueError) as e:
+            continue
+
+    print(f"📖 Extracted {len(entries)} heading controller samples from stdout")
     return entries
 
 
@@ -279,48 +269,76 @@ def analyze_log_data(entries: List[HeadingLogEntry], constants: HeadingConstants
     # Separate by state
     snap_entries = [e for e in entries if e.state == 'SNAP']
     maintain_entries = [e for e in entries if e.state == 'MAINTAIN']
+    off_entries = [e for e in entries if e.state == 'OFF']
 
     print(f"\nSample counts:")
     print(f"   SNAP:      {len(snap_entries)} samples")
     print(f"   MAINTAIN:  {len(maintain_entries)} samples")
+    print(f"   OFF:       {len(off_entries)} samples")
+
+    # Time range
+    if entries:
+        t_start = entries[0].timestamp
+        t_end = entries[-1].timestamp
+        print(f"   Time span: {t_end - t_start:.2f}s")
 
     # Analyze MAINTAIN steady-state error
     if maintain_entries:
         errors = [abs(e.error_deg) for e in maintain_entries]
         avg_error = sum(errors) / len(errors)
         max_error = max(errors)
-        print(f"\nMAINTAIN steady-state error:")
+        rms_error = math.sqrt(sum(e*e for e in errors) / len(errors))
+
+        print(f"\nMAINTAIN steady-state error (while driving):")
         print(f"   Average: {avg_error:.2f} deg")
+        print(f"   RMS:     {rms_error:.2f} deg")
         print(f"   Max:     {max_error:.2f} deg")
         print(f"   Target:  < 3.0 deg (for shooting)")
 
         # Calculate effective KP from observed error
-        # error_rad = disturbance / (KP_eff * max_omega)
-        # KP_eff = disturbance / (error_rad * max_omega)
-        avg_error_rad = math.radians(avg_error)
+        # error_deg = disturbance / (KP_eff * max_omega_deg_s)
         if avg_error > 0:
-            avg_error_rad = math.radians(avg_error)
             kp_effective = constants.disturbance_rate_deg_s / (avg_error * constants.max_angular_velocity_deg_s)
             print(f"   Effective KP from data: {kp_effective:.4f}")
             print(f"   Configured MAINTAIN_KP:  {constants.maintain_kp:.4f}")
 
             if avg_error > 3.0:
                 required_kp = required_kp_for_error(3.0, constants.max_angular_velocity_deg_s, constants.disturbance_rate_deg_s)
-                print(f"   WARNING: ERROR TOO HIGH! Increase MAINTAIN_KP to at least {required_kp:.4f}")
+                print(f"   ⚠️  WARNING: ERROR TOO HIGH! Increase MAINTAIN_KP to at least {required_kp:.4f}")
             elif avg_error < 1.0:
-                print(f"   OK: Error well within target")
+                print(f"   ✅ OK: Error well within target")
 
-    # Analyze SNAP performance
+    # Analyze SNAP performance (step responses)
     if snap_entries:
-        # Find step responses (large error -> small error)
         print(f"\nSNAP acquisition analysis:")
-        # Look for transitions where error decreases significantly
+        # Find step responses: large error -> decreasing error
+        step_starts = []
         for i in range(1, len(snap_entries)):
             prev_err = abs(snap_entries[i-1].error_deg)
             curr_err = abs(snap_entries[i].error_deg)
-            if prev_err > 10 and curr_err < prev_err * 0.5:
+            if prev_err > 10 and curr_err < prev_err * 0.8:
                 dt = snap_entries[i].timestamp - snap_entries[i-1].timestamp
-                print(f"   Step response detected: {prev_err:.1f} deg -> {curr_err:.1f} deg in {dt:.3f}s")
+                step_starts.append((i, prev_err, curr_err, dt))
+
+        for idx, prev_err, curr_err, dt in step_starts[:5]:  # Show first 5
+            print(f"   Step: {prev_err:.1f} deg -> {curr_err:.1f} deg in {dt:.3f}s (idx {idx})")
+
+        # Rise time estimation: time from 10% to 90% of initial error
+        for idx, prev_err, curr_err, dt in step_starts[:3]:
+            target_90 = prev_err * 0.1  # 10% remaining = 90% settled
+            target_10 = prev_err * 0.9  # 90% remaining = 10% settled
+            t_10 = None
+            t_90 = None
+            for j in range(idx, min(idx + 200, len(snap_entries))):  # Look ahead ~1 second at 200Hz
+                e = abs(snap_entries[j].error_deg)
+                if t_10 is None and e <= target_10:
+                    t_10 = snap_entries[j].timestamp
+                if t_90 is None and e <= target_90:
+                    t_90 = snap_entries[j].timestamp
+                    break
+            if t_10 and t_90:
+                rise_time = t_90 - t_10
+                print(f"   Estimated 10-90% rise time: {rise_time:.3f}s")
 
     # Check state transitions
     print(f"\nState transitions:")
@@ -338,9 +356,32 @@ def analyze_log_data(entries: List[HeadingLogEntry], constants: HeadingConstants
     # Check if transitions happen at correct thresholds
     for e in entries:
         if e.state == 'MAINTAIN' and abs(e.error_deg) > constants.heading_tolerance_deg * 1.5:
-            print(f"   WARNING: MAINTAIN with error {e.error_deg:.2f} deg > tolerance {constants.heading_tolerance_deg} deg")
+            print(f"   ⚠️  MAINTAIN with error {e.error_deg:.2f} deg > tolerance {constants.heading_tolerance_deg} deg")
         if e.state == 'SNAP' and abs(e.error_deg) < constants.heading_tolerance_deg:
-            print(f"   INFO: SNAP with error {e.error_deg:.2f} deg < tolerance (normal during acquisition)")
+            print(f"   ℹ️  SNAP with error {e.error_deg:.2f} deg < tolerance (normal during acquisition)")
+
+    # Output analysis
+    if maintain_entries:
+        outputs = [abs(e.output) for e in maintain_entries]
+        avg_output = sum(outputs) / len(outputs)
+        max_output = max(outputs)
+        print(f"\nMAINTAIN output (rotation demand):")
+        print(f"   Average: {avg_output:.3f}")
+        print(f"   Max:     {max_output:.3f}")
+        if max_output > 0.8:
+            print(f"   ⚠️  Output saturating! Consider higher max angular velocity or lower gains")
+
+    # Tracking error vs command analysis
+    if maintain_entries:
+        tracking_errors = []
+        for e in maintain_entries:
+            if abs(e.omega_cmd_rad_s) > 0.01:  # Only when commanding movement
+                tracking_error = abs(e.omega_cmd_rad_s - e.omega_actual_rad_s)
+                tracking_errors.append(tracking_error)
+        if tracking_errors:
+            avg_track = sum(tracking_errors) / len(tracking_errors)
+            print(f"\nRotation tracking (omega_cmd vs omega_actual):")
+            print(f"   Avg tracking error: {avg_track:.3f} rad/s ({math.degrees(avg_track):.1f} deg/s)")
 
 
 # ============================================================================
@@ -355,7 +396,7 @@ def interactive_tuning(constants: HeadingConstants):
 
     print(f"\nCurrent Constants:")
     print(f"   MAX_ANGULAR_VELOCITY = {constants.max_angular_velocity_rad_s:.3f} rad/s ({math.degrees(constants.max_angular_velocity_rad_s):.1f} deg/s)")
-    print(f"   Disturbance rate     = {constants.disturbance_rate_rad_s:.2f} rad/s")
+    print(f"   Disturbance rate     = {constants.disturbance_rate_rad_s:.2f} rad/s ({constants.disturbance_rate_deg_s:.1f} deg/s)")
     print(f"   SNAP_KP              = {constants.snap_kp:.4f}")
     print(f"   SNAP_KD              = {constants.snap_kd:.4f}")
     print(f"   MAINTAIN_KP          = {constants.maintain_kp:.4f}")
@@ -375,8 +416,6 @@ def interactive_tuning(constants: HeadingConstants):
         print(f"   {target} deg error -> KP = {req_kp:.4f}")
 
     print(f"\nEstimated Dynamics (approx, assuming 2nd order):")
-    # Natural frequency approximation: wn = sqrt(KP * max_omega_deg_s)
-    # Damping ratio: zeta = KD * max_omega_deg_s / (2 * wn)
     snap_wn = math.sqrt(constants.snap_kp * constants.max_angular_velocity_deg_s)
     snap_zeta = constants.snap_kd * constants.max_angular_velocity_deg_s / (2 * snap_wn) if snap_wn > 0 else 0
     maintain_wn = math.sqrt(constants.maintain_kp * constants.max_angular_velocity_deg_s)
@@ -435,7 +474,8 @@ def interactive_tuning(constants: HeadingConstants):
 
 def main():
     parser = argparse.ArgumentParser(description='Heading PID Tuning Tool')
-    parser.add_argument('--log', type=Path, help='Path to .wpilog file to analyze')
+    parser.add_argument('--csv', type=Path, help='Path to CSV file (exported from robot stdout)')
+    parser.add_argument('--stdout', type=Path, help='Path to robot stdout/stderr log file (extracts HDG_CSV lines)')
     parser.add_argument('--interactive', action='store_true', help='Run interactive tuning calculator')
     parser.add_argument('--no-interactive', action='store_true', help='Skip interactive mode, just show analysis')
     parser.add_argument('--constants-dir', type=Path, default=Path('src/main/java/frc/robot'),
@@ -458,15 +498,19 @@ def main():
     print_theoretical_analysis(constants)
 
     # Analyze log if provided
-    if args.log:
-        entries = parse_wpilog_for_heading(args.log)
+    entries = []
+    if args.csv:
+        entries = parse_csv_log(args.csv)
+        analyze_log_data(entries, constants)
+    elif args.stdout:
+        entries = parse_csv_from_stdout(args.stdout)
         analyze_log_data(entries, constants)
 
     # Run interactive if requested
     if args.interactive and not args.no_interactive:
         interactive_tuning(constants)
-    elif not args.log and not args.no_interactive:
-        print("\n[INFO] Use --interactive for tuning calculator, or --log <file.wpilog> to analyze data")
+    elif not args.csv and not args.stdout and not args.no_interactive:
+        print("\n[INFO] Use --interactive for tuning calculator, or --csv <file.csv> / --stdout <file.log> to analyze data")
         print("       Use --no-interactive to skip interactive mode")
 
 
@@ -489,7 +533,6 @@ def print_theoretical_analysis(constants: HeadingConstants):
         print(f"   {target} deg error -> KP = {req_kp:.4f}{status}")
 
     print(f"\nDynamics Approximation (2nd order model):")
-    # wn = sqrt(KP * max_omega), zeta = KD * max_omega / (2 * wn)
     snap_wn = math.sqrt(constants.snap_kp * constants.max_angular_velocity_deg_s)
     snap_zeta = constants.snap_kd * constants.max_angular_velocity_deg_s / (2 * snap_wn) if snap_wn > 0 else 0
     maintain_wn = math.sqrt(constants.maintain_kp * constants.max_angular_velocity_deg_s)

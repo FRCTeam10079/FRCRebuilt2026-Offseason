@@ -16,6 +16,7 @@ import frc.robot.Constants.AlignPosition;
 import frc.robot.Constants.VisionConstants;
 import frc.robot.LimelightHelpers;
 import frc.robot.commands.AlignToAprilTag;
+import frc.robot.commands.HeadingStepTest;
 import frc.robot.subsystems.drive.CommandSwerveDrivetrain;
 import frc.robot.subsystems.indexer.IndexerSubsystem;
 import frc.robot.subsystems.intake.IntakeWheelsSubsystem;
@@ -135,6 +136,42 @@ public final class TestingBindings {
     leftTrigger
         .and(backHeld)
         .whileTrue(shooter.holdRPMCommand(Constants.ShooterConstants.SHOOTER_SPINUP_SPEED));
+
+    // ==================== HEADING PID TUNING ====================
+    // Back + Y - Heading step response test (0 -> 90 -> -90 -> 0)
+    // Captures CSV data to stdout for PID tuning analysis
+    backHeld
+        .and(controller.y())
+        .whileTrue(HeadingStepTest.headingStepTest(
+            drivetrain,
+            Constants.DrivetrainConstants.MAX_ANGULAR_RATE_RAD_PER_SEC));
+
+    // Back + POV Right - Single step to 90°
+    backHeld
+        .and(controller.povRight())
+        .whileTrue(HeadingStepTest.singleHeadingStep(
+            drivetrain,
+            90.0,
+            Constants.DrivetrainConstants.MAX_ANGULAR_RATE_RAD_PER_SEC,
+            3.0));
+
+    // Back + POV Left - Single step to -90°
+    backHeld
+        .and(controller.povLeft())
+        .whileTrue(HeadingStepTest.singleHeadingStep(
+            drivetrain,
+            -90.0,
+            Constants.DrivetrainConstants.MAX_ANGULAR_RATE_RAD_PER_SEC,
+            3.0));
+
+    // Back + POV Down - Single step to 0°
+    backHeld
+        .and(controller.povDown())
+        .whileTrue(HeadingStepTest.singleHeadingStep(
+            drivetrain,
+            0.0,
+            Constants.DrivetrainConstants.MAX_ANGULAR_RATE_RAD_PER_SEC,
+            3.0));
 
     new Trigger(shooter::isReady)
         .and(leftTrigger)
