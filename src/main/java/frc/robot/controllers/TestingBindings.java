@@ -173,6 +173,13 @@ public final class TestingBindings {
             Constants.DrivetrainConstants.MAX_ANGULAR_RATE_RAD_PER_SEC,
             3.0));
 
+    // Back + POV Up - Full auto sequence: 0° → 90° → -90° → 0°
+    backHeld
+        .and(controller.povUp())
+        .whileTrue(HeadingStepTest.headingStepTest(
+            drivetrain,
+            Constants.DrivetrainConstants.MAX_ANGULAR_RATE_RAD_PER_SEC));
+
     new Trigger(shooter::isReady)
         .and(leftTrigger)
         .and(backHeld)
