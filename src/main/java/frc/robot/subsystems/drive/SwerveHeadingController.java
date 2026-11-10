@@ -262,5 +262,31 @@ public class SwerveHeadingController {
     Logger.recordOutput("HeadingController/CurrentDeg", currentHeadingDegrees);
     Logger.recordOutput("HeadingController/ErrorDeg", getError());
     Logger.recordOutput("HeadingController/AtGoal", isAtGoal());
+    Logger.recordOutput("HeadingController/ActiveKP", m_pidController.getP());
+    Logger.recordOutput("HeadingController/ActiveKD", m_pidController.getD());
+    // Note: P/D output components and omega values logged in logCSV() via driveWithHeadingLock
+  }
+
+  /** Log detailed CSV-style telemetry (call from driveWithHeadingLock each loop) */
+  public void logTelemetryDetailed(double currentHeadingDegrees, double totalOutput,
+                                    double maxAngularVelocity, double measuredOmegaRadPerSec) {
+    double dt = Timer.getFPGATimestamp() - m_lastTimestamp;
+    double errorDeg = getError();
+    double kP = m_pidController.getP();
+    double kD = m_pidController.getD();
+    double pOutput = kP * errorDeg;
+    double dApprox = (dt > 0.001) ? kD * (errorDeg - m_lastErrorDeg) / dt : 0.0;
+    double omegaCmd = totalOutput * maxAngularVelocity;
+
+    Logger.recordOutput("HeadingController/ActiveKP", kP);
+    Logger.recordOutput("HeadingController/ActiveKD", kD);
+    Logger.recordOutput("HeadingController/POutput", pOutput);
+    Logger.recordOutput("HeadingController/DApprox", dApprox);
+    Logger.recordOutput("HeadingController/TotalOutput", totalOutput);
+    Logger.recordOutput("HeadingController/OmegaCmdRadPerSec", omegaCmd);
+    Logger.recordOutput("HeadingController/OmegaActualRadPerSec", measuredOmegaRadPerSec);
+
+    m_lastErrorDeg = errorDeg;
+    m_lastTimestamp = Timer.getFPGATimestamp();
   }
 }

@@ -252,6 +252,110 @@ def parse_csv_from_stdout(stdout_path: Path) -> List[HeadingLogEntry]:
     return entries
 
 
+def parse_wpilog_advantagekit(wpilog_path: Path) -> List[HeadingLogEntry]:
+    """
+    Parse HeadingController data from AdvantageKit .wpilog file.
+    Expected keys (logged via logTelemetryDetailed):
+    - /RealOutputs/HeadingController/State
+    - /RealOutputs/HeadingController/GoalDeg
+    - /RealOutputs/HeadingController/CurrentDeg
+    - /RealOutputs/HeadingController/ErrorDeg
+    - /RealOutputs/HeadingController/AtGoal
+    - /RealOutputs/HeadingController/ActiveKP
+    - /RealOutputs/HeadingController/ActiveKD
+    - /RealOutputs/HeadingController/POutput
+    - /RealOutputs/HeadingController/DApprox
+    - /RealOutputs/HeadingController/TotalOutput
+    - /RealOutputs/HeadingController/OmegaCmdRadPerSec
+    - /RealOutputs/HeadingController/OmegaActualRadPerSec
+    """
+    try:
+        import wpilog
+    except ImportError:
+        print("⚠️  robotpy-wpilog not installed. Install with: pip install robotpy-wpilog")
+        return []
+
+    reader = wpilog.DataLogReader(str(wpilog_path))
+    if not reader.is_valid():
+        print(f"❌ Invalid log file: {wpilog_path}")
+        return []
+
+    # First pass: get entry types and names for HeadingController entries
+    entry_types = {}
+    entry_names = {}
+    hc_entries = {}
+    for record in reader:
+        if record.is_start():
+            data = record.get_start_data()
+            entry_types[data.entry] = data.type
+            entry_names[data.entry] = data.name
+            if 'HeadingController' in data.name:
+                hc_entries[data.entry] = data.name
+
+    if not hc_entries:
+        print("❌ No HeadingController entries found in .wpilog")
+        return []
+
+    print(f"📖 Found {len(hc_entries)} HeadingController entries in .wpilog")
+
+    # Second pass: extract data
+    data = {name: [] for name in hc_entries.values()}
+    for record in reader:
+        entry = record.get_entry()
+        if entry in hc_entries:
+            name = hc_entries[entry]
+            typ = entry_types[entry]
+            try:
+                if typ == 'double':
+                    val = record.get_double()
+                    data[name].append((record.get_timestamp(), val))
+                elif typ == 'boolean':
+                    val = record.get_boolean()
+                    data[name].append((record.get_timestamp(), val))
+                elif typ == 'string':
+                    val = record.get_string()
+                    data[name].append((record.get_timestamp(), val))
+            except Exception:
+                pass
+
+    # Align data by timestamp (find closest matches)
+    # Use State as reference since it's logged consistently
+    state_key = None
+    for k in data:
+        if 'State' in k:
+            state_key = k
+            break
+
+    if not state_key or not data[state_key]:
+        print("❌ No State data found")
+        return []
+
+    entries = []
+    for ts, state in data[state_key]:
+        # Find closest timestamp in other arrays
+        def find_closest(arr, target_ts):
+            if not arr:
+                return None
+            return min(arr, key=lambda x: abs(x[0] - target_ts))[1]
+
+        entry = HeadingLogEntry(
+            timestamp=ts / 1e6,  # Convert to seconds
+            state=str(state),
+            goal_deg=find_closest(data.get('/RealOutputs/HeadingController/GoalDeg', []), ts) or 0.0,
+            current_deg=find_closest(data.get('/RealOutputs/HeadingController/CurrentDeg', []), ts) or 0.0,
+            error_deg=find_closest(data.get('/RealOutputs/HeadingController/ErrorDeg', []), ts) or 0.0,
+            kp=find_closest(data.get('/RealOutputs/HeadingController/ActiveKP', []), ts) or 0.0,
+            kd=find_closest(data.get('/RealOutputs/HeadingController/ActiveKD', []), ts) or 0.0,
+            output=find_closest(data.get('/RealOutputs/HeadingController/TotalOutput', []), ts) or 0.0,
+            omega_cmd_rad_s=find_closest(data.get('/RealOutputs/HeadingController/OmegaCmdRadPerSec', []), ts) or 0.0,
+            omega_actual_rad_s=find_closest(data.get('/RealOutputs/HeadingController/OmegaActualRadPerSec', []), ts) or 0.0,
+        )
+        entries.append(entry)
+
+    print(f"📖 Parsed {len(entries)} heading controller samples from .wpilog")
+    return entries
+
+
 # ============================================================================
 # LOG ANALYSIS
 # ============================================================================
@@ -476,6 +580,7 @@ def main():
     parser = argparse.ArgumentParser(description='Heading PID Tuning Tool')
     parser.add_argument('--csv', type=Path, help='Path to CSV file (exported from robot stdout)')
     parser.add_argument('--stdout', type=Path, help='Path to robot stdout/stderr log file (extracts HDG_CSV lines)')
+    parser.add_argument('--wpilog', type=Path, help='Path to AdvantageKit .wpilog file (parses HeadingController entries)')
     parser.add_argument('--interactive', action='store_true', help='Run interactive tuning calculator')
     parser.add_argument('--no-interactive', action='store_true', help='Skip interactive mode, just show analysis')
     parser.add_argument('--constants-dir', type=Path, default=Path('src/main/java/frc/robot'),
@@ -505,12 +610,21 @@ def main():
     elif args.stdout:
         entries = parse_csv_from_stdout(args.stdout)
         analyze_log_data(entries, constants)
+    elif args.wpilog:
+        entries = parse_wpilog_advantagekit(args.wpilog)
+        analyze_log_data(entries, constants)
+    elif args.stdout:
+        entries = parse_csv_from_stdout(args.stdout)
+        analyze_log_data(entries, constants)
+    elif args.wpilog:
+        entries = parse_wpilog_advantagekit(args.wpilog)
+        analyze_log_data(entries, constants)
 
     # Run interactive if requested
     if args.interactive and not args.no_interactive:
         interactive_tuning(constants)
-    elif not args.csv and not args.stdout and not args.no_interactive:
-        print("\n[INFO] Use --interactive for tuning calculator, or --csv <file.csv> / --stdout <file.log> to analyze data")
+    elif not args.csv and not args.stdout and not args.wpilog and not args.no_interactive:
+        print("\n[INFO] Use --interactive for tuning calculator, or --csv <file.csv> / --stdout <file.log> / --wpilog <file.wpilog> to analyze data")
         print("       Use --no-interactive to skip interactive mode")
 
 
