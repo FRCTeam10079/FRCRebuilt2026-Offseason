@@ -7,7 +7,7 @@ public class HeadingControllerConstants {
   // well-damped convergence when SNAP actually engages.
   public static final double SNAP_KP = 0.06;
   public static final double SNAP_KI = 0.0;
-  public static final double SNAP_KD = 0.003;
+  public static final double SNAP_KD = 0.0005;
 
   // MAINTAIN gains - used to hold heading while driving.
   // 4x increase from originals (0.01/0.0005). Data analysis showed 12-14 deg
@@ -20,7 +20,7 @@ public class HeadingControllerConstants {
   // KD scaled proportionally to damp oscillation from the higher P.
   public static final double MAINTAIN_KP = 0.04;
   public static final double MAINTAIN_KI = 0.0;
-  public static final double MAINTAIN_KD = 0.002;
+  public static final double MAINTAIN_KD = 0.0005;
 
   // Tightened from 2.0 to 1.5 deg. The old tolerance caused SNAP to exit on the
   // very first cycle (before the robot had actually settled), dumping it into
@@ -42,11 +42,17 @@ public class HeadingControllerConstants {
   // MA (6328) uses kP=8.0, kD=0.5 with radians. We use the same as a starting
   // point.
 
-  /** P gain for launch-mode heading control (rad/s output per radian of error). */
+  /**
+   * P gain for launch-mode heading control (rad/s output per radian of error).
+   */
   public static final double LAUNCH_KP = 8.2;
 
-  /** D gain for launch-mode heading control (rad/s output per rad/s velocity error). */
+  /**
+   * D gain for launch-mode heading control (rad/s output per rad/s velocity
+   * error).
+   */
   public static final double LAUNCH_KD = 0.7;
 
-  protected HeadingControllerConstants() {}
+  protected HeadingControllerConstants() {
+  }
 }
