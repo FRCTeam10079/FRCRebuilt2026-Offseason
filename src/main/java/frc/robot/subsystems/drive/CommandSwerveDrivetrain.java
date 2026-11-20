@@ -889,7 +889,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     // Log ALL heading controller telemetry to AdvantageKit (.wpilog)
     m_headingController.logTelemetry(currentHeadingDegrees);
     m_headingController.logTelemetryDetailed(currentHeadingDegrees, rotationOutput,
-                                              maxAngularVelocity, measuredOmega);
+        maxAngularVelocity, measuredOmega);
   }
 
   /**
