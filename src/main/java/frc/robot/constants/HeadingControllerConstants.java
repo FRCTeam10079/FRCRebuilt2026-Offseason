@@ -5,9 +5,9 @@ public class HeadingControllerConstants {
   // 3x increase from originals (0.02/0.001). Data showed SNAP never ran because
   // the old 2 deg tolerance was hit instantly. These higher gains ensure a fast,
   // well-damped convergence when SNAP actually engages.
-  public static final double SNAP_KP = 0.03;
+  public static final double SNAP_KP = 0.0225;
   public static final double SNAP_KI = 0.0;
-  public static final double SNAP_KD = 0.0005;
+  public static final double SNAP_KD = 0.00025;
 
   // MAINTAIN gains - used to hold heading while driving.
   // 4x increase from originals (0.01/0.0005). Data analysis showed 12-14 deg
@@ -18,9 +18,9 @@ public class HeadingControllerConstants {
   // new: 0.4 / (0.04 * pi) ~ 3.2 deg <-- acceptable for shooting
   // KI stays zero - a moving target would cause integral wind-up.
   // KD scaled proportionally to damp oscillation from the higher P.
-  public static final double MAINTAIN_KP = 0.03;
+  public static final double MAINTAIN_KP = 0.0225;
   public static final double MAINTAIN_KI = 0.0;
-  public static final double MAINTAIN_KD = 0.0005;
+  public static final double MAINTAIN_KD = 0.00025;
 
   // Tightened from 2.0 to 1.5 deg. The old tolerance caused SNAP to exit on the
   // very first cycle (before the robot had actually settled), dumping it into
