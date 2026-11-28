@@ -826,8 +826,10 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     // Apply to drivetrain
     setControl(m_fieldCentricRequest.withSpeeds(compensatedSpeeds));
 
-    // Log heading controller telemetry
+    // Log ALL heading controller telemetry to AdvantageKit (.wpilog)
     m_headingController.logTelemetry(currentHeadingDegrees);
+    m_headingController.logTelemetryDetailed(currentHeadingDegrees, rotationOutput,
+        maxAngularVelocity, measuredOmega);
   }
 
   /**
