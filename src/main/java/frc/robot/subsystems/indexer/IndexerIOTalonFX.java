@@ -24,7 +24,7 @@ public class IndexerIOTalonFX implements IndexerIO {
 
   private void configureMotors() {
     TalonFXConfiguration feederConfig = new TalonFXConfiguration();
-    feederConfig.CurrentLimits.StatorCurrentLimit = IndexerConstants.kCurrentLimit;
+    feederConfig.CurrentLimits.StatorCurrentLimit = IndexerConstants.kFeederCurrentLimit;
     feederConfig.CurrentLimits.StatorCurrentLimitEnable = true;
     feederConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
     feederConfig.Slot0 = new Slot0Configs()
@@ -38,7 +38,7 @@ public class IndexerIOTalonFX implements IndexerIO {
     feederMotor.getConfigurator().apply(feederConfig);
 
     TalonFXConfiguration spindexerConfig = new TalonFXConfiguration();
-    spindexerConfig.CurrentLimits.StatorCurrentLimit = IndexerConstants.kCurrentLimit;
+    spindexerConfig.CurrentLimits.StatorCurrentLimit = IndexerConstants.kSpindexerCurrentLimit;
     spindexerConfig.CurrentLimits.StatorCurrentLimitEnable = true;
     spindexerConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
     spindexerConfig.Slot0 = new Slot0Configs()

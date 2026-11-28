@@ -36,38 +36,19 @@
               {
                 "type": "named",
                 "data": {
-                  "name": "intakeFuel"
+                  "name": "Shoot"
                 }
               },
               {
-                "type": "path",
-                "data": {
-                  "pathName": "CenterToIntakeDepot"
-                }
-              }
-            ]
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "DepotToShoot"
-          }
-        },
-        {
-          "type": "race",
-          "data": {
-            "commands": [
-              {
                 "type": "named",
                 "data": {
-                  "name": "Shoot"
+                  "name": "intakeFuel"
                 }
               },
               {
                 "type": "wait",
                 "data": {
-                  "waitTime": 5.0
+                  "waitTime": 1.2
                 }
               }
             ]
@@ -92,7 +73,7 @@
               {
                 "type": "wait",
                 "data": {
-                  "waitTime": 0.7
+                  "waitTime": 0.6
                 }
               }
             ]
@@ -111,13 +92,63 @@
               {
                 "type": "named",
                 "data": {
-                  "name": "deployPivot"
+                  "name": "intakeFuel"
                 }
               },
               {
                 "type": "wait",
                 "data": {
-                  "waitTime": 1.0
+                  "waitTime": 1.2
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "race",
+          "data": {
+            "commands": [
+              {
+                "type": "named",
+                "data": {
+                  "name": "Shoot"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "stowPivot"
+                }
+              },
+              {
+                "type": "wait",
+                "data": {
+                  "waitTime": 0.6
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "race",
+          "data": {
+            "commands": [
+              {
+                "type": "named",
+                "data": {
+                  "name": "Shoot"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "intakeFuel"
+                }
+              },
+              {
+                "type": "wait",
+                "data": {
+                  "waitTime": 3.0
                 }
               }
             ]
